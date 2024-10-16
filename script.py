@@ -1,7 +1,7 @@
 import openai
 
 # Your OpenAI API token
-openai.api_key = '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'  # Replace with your actual API key 
+openai.api_key = 's....A'  # Replace with your actual API key 
 
 
 # Step 1: Transcribe the conversation using Whisper
@@ -97,5 +97,3 @@ print("Transcription and SOAP summary saved to soap_summary.txt")
 
 
 
-
-# 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
