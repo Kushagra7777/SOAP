@@ -1,0 +1,6 @@
+SOAP Summary:
+S: The patient has been experiencing chest pain around the left chest area for about six months. The pain is long-lasting and causes the patient anxiety, fearing it may lead to death. The patient lives with his wife's parents and two children. The patient's mother-in-law has dementia and wanders at night, and the father-in-law is worn out from caregiving. The patient's life is under pressure due to bad friends, police reports, financial struggles, and job insecurity. 
+
+O: The doctor explains that chest pain could be due to a condition called angina where the blood vessels supplying nutrients to the heart become constricted. However, it could also be due to stress or acid reflux from the stomach. 
+
+A: The doctor suspects
