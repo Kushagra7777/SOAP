@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Audio Transcriber & Summarizer</title>
+</head>
+<body>
+  <h1>Japanese Medical Transcriber</h1>
+
+  <input type="file" id="audioFile" accept="audio/*" />
+  <br><br>
+  <button onclick="uploadAndTranscribe()">Upload & Transcribe</button>
+  <button onclick="generateSummary()">Generate Summary</button>
+
+  <h2>Transcript (Japanese):</h2>
+  <textarea id="transcript" rows="10" cols="100" readonly style="resize: vertical;"></textarea>
+
+  <h2>SOAP + SAMPLE + OPQRST Summary:</h2>
+<pre id="summary"></pre>
+
+<script>
+  let uploadedFilePath = '';
+
+  async function uploadAndTranscribe() {
+    const fileInput = document.getElementById('audioFile');
+    const file = fileInput.files[0];
+    if (!file) {
+      alert("Please select an audio file first.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Show a loading message in the transcript textarea
+    const transcriptBox = document.getElementById('transcript');
+    transcriptBox.value = "Processing... Please wait...";
+    transcriptBox.scrollTop = transcriptBox.scrollHeight;  // Scroll to the bottom
+
+    try {
+      // Step 1: Upload
+      const uploadRes = await fetch('http://localhost:8000/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadData.file_path) {
+        throw new Error("File upload failed: " + JSON.stringify(uploadData));
+      }
+      uploadedFilePath = uploadData.file_path;
+
+      // Step 2: Transcribe
+      const transcribeRes = await fetch('http://localhost:8000/transcribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ file_path: uploadedFilePath })
+      });
+
+      const transcribeData = await transcribeRes.json();
+      if (!transcribeData.transcript) {
+        throw new Error("Transcription failed: " + JSON.stringify(transcribeData));
+      }
+
+      // Update transcript box with the transcribed text
+      transcriptBox.value = transcribeData.transcript;
+      transcriptBox.scrollTop = transcriptBox.scrollHeight;  // Scroll to the bottom
+
+      // Save transcript to original_transcript.txt (via a separate endpoint or backend logic)
+      await fetch('http://localhost:8000/save_transcript', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript: transcribeData.transcript })
+      });
+
+    } catch (err) {
+      console.error("Error:", err);
+      alert("An error occurred during upload or transcription.\n" + err.message);
+    }
+  }
+
+  async function generateSummary() {
+    // Show a loading message in the summary box
+    const summaryBox = document.getElementById('summary');
+    summaryBox.textContent = "Processing... Please wait...";
+    summaryBox.scrollTop = summaryBox.scrollHeight; // Scroll to the bottom
+
+    try {
+      const res = await fetch('http://localhost:8000/summarize', {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (!data.summary) {
+        throw new Error("Summary generation failed: " + JSON.stringify(data));
+      }
+
+      // Update summary box with the generated summary
+      summaryBox.textContent = data.summary;
+      summaryBox.scrollTop = summaryBox.scrollHeight; // Scroll to the bottom
+    } catch (err) {
+      console.error("Error:", err);
+      alert("An error occurred while generating the summary.\n" + err.message);
+    }
+  }
+</script>
+
+</body>
+</html>
