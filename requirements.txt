@@ -1,6 +1,6 @@
+openai
+python-dotenv
 fastapi
 uvicorn
-openai
-python-multipart
-pydantic
 whisper
+pydantic
