@@ -1,30 +1,40 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-import whisper
-import os
+from pydantic import BaseModel
 from pathlib import Path
 import uuid
+import torch
+import whisper
+import os
+
 from backend.script import generate_soap_summary  # Adjust if needed
-from pydantic import BaseModel
 
 app = FastAPI()
 
-# ✅ Add CORS middleware AFTER app creation
+# ✅ Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For dev, allow all; tighten for prod
+    allow_origins=["*"],  # Allow all origins for dev
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Set up uploads directory
+# 📁 Set up upload directory
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# Load Whisper model
-model = whisper.load_model("base", device="cuda")
+# ✅ Select best available device: CUDA (NVIDIA), MPS (Apple), or CPU
+if torch.cuda.is_available():
+    device = "cuda"
+elif torch.backends.mps.is_available():
+    device = "mps"
+else:
+    device = "cpu"
+
+# ✅ Load Whisper model on selected device
+model = whisper.load_model("base", device=device)
 
 @app.get("/")
 def read_root():
@@ -60,6 +70,7 @@ def summarize_route():
         return {"summary": soap_summary}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # uvicorn backend.main:app --reload
