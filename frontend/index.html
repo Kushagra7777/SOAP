@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="style.css">
   <title>Audio Transcriber & Summarizer</title>
 </head>
 <body>
+  <div class="container">
   <h1>Japanese Medical Transcriber</h1>
 
   <input type="file" id="audioFile" accept="audio/*" />
@@ -12,11 +14,18 @@
   <button onclick="uploadAndTranscribe()">Upload & Transcribe</button>
   <button onclick="generateSummary()">Generate Summary</button>
 
-  <h2>Transcript (Japanese):</h2>
-  <textarea id="transcript" rows="10" cols="100" readonly style="resize: vertical;"></textarea>
+  <div class="section">
+    <h2>Transcript (Japanese):</h2>
+    <button onclick="copyTranscript()">📋 Copy transcript to Clipboard</button><br><br>
+    <textarea id="transcript" rows="20"></textarea>
+  </div>
 
-  <h2>SOAP + SAMPLE + OPQRST Summary:</h2>
-<pre id="summary"></pre>
+  <div class="section">
+    <h2>SOAP + SAMPLE + OPQRST Summary:</h2>
+    <button onclick="copySummary()">📋 Copy Summary to Clipboard</button><br><br>
+    <textarea id="summary" rows="20"></textarea>
+  </div>
+</div>
 
 <script>
   let uploadedFilePath = '';
@@ -81,29 +90,57 @@
   }
 
   async function generateSummary() {
-    // Show a loading message in the summary box
-    const summaryBox = document.getElementById('summary');
-    summaryBox.textContent = "Processing... Please wait...";
-    summaryBox.scrollTop = summaryBox.scrollHeight; // Scroll to the bottom
+  const summaryBox = document.getElementById('summary');
+  const transcriptBox = document.getElementById('transcript');
+  const updatedTranscript = transcriptBox.value;
 
-    try {
-      const res = await fetch('http://localhost:8000/summarize', {
-        method: 'POST'
-      });
-      const data = await res.json();
-      if (!data.summary) {
-        throw new Error("Summary generation failed: " + JSON.stringify(data));
-      }
+  summaryBox.textContent = "Processing... Please wait...";
+  summaryBox.scrollTop = summaryBox.scrollHeight;
 
-      // Update summary box with the generated summary
-      summaryBox.textContent = data.summary;
-      summaryBox.scrollTop = summaryBox.scrollHeight; // Scroll to the bottom
-    } catch (err) {
-      console.error("Error:", err);
-      alert("An error occurred while generating the summary.\n" + err.message);
+  try {
+    // Step 0: Save updated transcript
+    await fetch('http://localhost:8000/save_transcript', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript: updatedTranscript })
+    });
+
+    // Step 1: Generate summary
+    const res = await fetch('http://localhost:8000/summarize', {
+      method: 'POST'
+    });
+    const data = await res.json();
+    if (!data.summary) {
+      throw new Error("Summary generation failed: " + JSON.stringify(data));
     }
+
+    summaryBox.textContent = data.summary;
+    summaryBox.scrollTop = summaryBox.scrollHeight;
+  } catch (err) {
+    console.error("Error:", err);
+    alert("An error occurred while generating the summary.\n" + err.message);
+  }
+}
+
+
+  // ✅ Add Copy to Clipboard function
+  function copyTranscript() {
+    const textarea = document.getElementById("transcript");
+    textarea.select();
+    textarea.setSelectionRange(0, 99999); // For mobile devices
+    document.execCommand("copy");
+    // alert("Transcript copied to clipboard!");
+  }
+
+  function copySummary() {
+    const textarea = document.getElementById("summary");
+    textarea.select();
+    textarea.setSelectionRange(0, 99999); // For mobile devices
+    document.execCommand("copy");
+    // alert("Summary copied to clipboard!");
   }
 </script>
+
 
 </body>
 </html>

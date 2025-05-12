@@ -4,11 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pathlib import Path
 import uuid
-import torch
-import whisper
 import os
 
-from backend.script import generate_soap_summary  # Adjust if needed
+from backend.script import generate_soap_summary  
+from backend.transcript import transcribe_audio  # This uses OpenAI Whisper API
 
 app = FastAPI()
 
@@ -24,17 +23,6 @@ app.add_middleware(
 # 📁 Set up upload directory
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
-
-# ✅ Select best available device: CUDA (NVIDIA), MPS (Apple), or CPU
-if torch.cuda.is_available():
-    device = "cuda"
-elif torch.backends.mps.is_available():
-    device = "mps"
-else:
-    device = "cpu"
-
-# ✅ Load Whisper model on selected device
-model = whisper.load_model("base", device=device)
 
 @app.get("/")
 def read_root():
@@ -56,12 +44,26 @@ class FilePathInput(BaseModel):
 
 @app.post("/transcribe")
 def transcribe(data: FilePathInput):
-    file_path = data.file_path
-    result = model.transcribe(file_path, language="ja")
-    transcript = result["text"]
-    with open("original_transcript.txt", "w", encoding="utf-8") as f:
-        f.write(transcript)
-    return {"transcript": transcript}
+    try:
+        file_path = data.file_path
+        transcript = transcribe_audio(file_path)
+        with open("original_transcript.txt", "w", encoding="utf-8") as f:
+            f.write(transcript)
+        return {"transcript": transcript}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class TranscriptInput(BaseModel):
+    transcript: str
+
+@app.post("/save_transcript")
+def save_transcript(data: TranscriptInput):
+    try:
+        with open("original_transcript.txt", "w", encoding="utf-8") as f:
+            f.write(data.transcript)
+        return {"message": "Transcript saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/summarize")
 def summarize_route():
@@ -70,6 +72,8 @@ def summarize_route():
         return {"summary": soap_summary}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 

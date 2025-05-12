@@ -1,6 +1,0 @@
-openai
-python-dotenv
-fastapi
-uvicorn
-whisper
-pydantic
