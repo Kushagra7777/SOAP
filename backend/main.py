@@ -65,10 +65,14 @@ def save_transcript(data: TranscriptInput):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+class SummaryRequest(BaseModel):
+    summary_types: list[str]
+    
 @app.post("/summarize")
-def summarize_route():
+def summarize_route(request: SummaryRequest):
     try:
-        soap_summary = generate_soap_summary("original_transcript.txt")
+        soap_summary = generate_soap_summary("original_transcript.txt", request.summary_types)
         return {"summary": soap_summary}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
