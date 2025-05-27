@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -159,5 +159,161 @@
 </script>
 
 
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="style.css">
+  <title>Audio Transcriber & Summarizer</title>
+</head>
+<body>
+  <div class="container">
+    <h1>Japanese Medical Transcriber</h1>
+    <input type="file" id="audioFile" accept="audio/*" onchange="uploadAndTranscribe()" />
+    <br><br>
+
+    <div class="section">
+      <h2>Transcript (Japanese):</h2>
+      <button onclick="copyTranscript()">📋 Copy transcript to Clipboard</button><br><br>
+      <textarea id="transcript" rows="20"></textarea>
+    </div>
+
+    <div class="section">
+      <h2>Summary:</h2>
+      <div style="margin-bottom: 10px;">
+        <strong>Select Summary Type:</strong><br>
+        <label><input type="checkbox" id="soapCheckbox" checked> SOAP</label>
+        <label><input type="checkbox" id="sampleCheckbox" checked> SAMPLE</label>
+        <label><input type="checkbox" id="opqrstCheckbox" checked> OPQRST</label>
+      </div>
+      <button onclick="copySummary()">📋 Copy Summary to Clipboard</button><br><br>
+      <textarea id="summary" rows="20"></textarea>
+    </div>
+
+    <script>
+      let uploadedFilePath = '';
+
+      async function uploadAndTranscribe() {
+        const fileInput = document.getElementById('audioFile');
+        const file = fileInput.files[0];
+        if (!file) {
+          alert("Please select an audio file first.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Show a loading message in the transcript textarea
+        const transcriptBox = document.getElementById('transcript');
+        transcriptBox.value = "Processing... Please wait...";
+        transcriptBox.scrollTop = transcriptBox.scrollHeight;
+
+        try {
+          // Step 1: Upload
+          const uploadRes = await fetch('http://localhost:8000/upload', {
+            method: 'POST',
+            body: formData
+          });
+          const uploadData = await uploadRes.json();
+          if (!uploadData.file_path) {
+            throw new Error("File upload failed: " + JSON.stringify(uploadData));
+          }
+          uploadedFilePath = uploadData.file_path;
+
+          // Step 2: Transcribe
+          const transcribeRes = await fetch('http://localhost:8000/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_path: uploadedFilePath })
+          });
+
+          const transcribeData = await transcribeRes.json();
+          if (!transcribeData.transcript) {
+            throw new Error("Transcription failed: " + JSON.stringify(transcribeData));
+          }
+
+          // Update transcript box with the transcribed text
+          transcriptBox.value = transcribeData.transcript;
+          transcriptBox.scrollTop = transcriptBox.scrollHeight;
+
+          // Save transcript to original_transcript.txt (via a separate endpoint or backend logic)
+          await fetch('http://localhost:8000/save_transcript', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcript: transcribeData.transcript })
+          });
+
+          // ✅ As soon as transcript is done, trigger summary
+          generateSummary();
+
+        } catch (err) {
+          console.error("Error:", err);
+          alert("An error occurred during upload or transcription.\n" + err.message);
+        }
+      }
+
+      async function generateSummary() {
+        const summaryBox = document.getElementById('summary');
+        const transcriptBox = document.getElementById('transcript');
+        const updatedTranscript = transcriptBox.value;
+
+        const summaryTypes = [];
+        if (document.getElementById('soapCheckbox').checked) summaryTypes.push("SOAP");
+        if (document.getElementById('sampleCheckbox').checked) summaryTypes.push("SAMPLE");
+        if (document.getElementById('opqrstCheckbox').checked) summaryTypes.push("OPQRST");
+
+        if (summaryTypes.length === 0) {
+          alert("Please select at least one summary type.");
+          return;
+        }
+
+        summaryBox.textContent = "Processing... Please wait...";
+        summaryBox.scrollTop = summaryBox.scrollHeight;
+
+        try {
+          await fetch('http://localhost:8000/save_transcript', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcript: updatedTranscript })
+          });
+
+          const res = await fetch('http://localhost:8000/summarize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ summary_types: summaryTypes })
+          });
+          const data = await res.json();
+          if (!data.summary) {
+            throw new Error("Summary generation failed: " + JSON.stringify(data));
+          }
+
+          summaryBox.textContent = data.summary;
+          summaryBox.scrollTop = summaryBox.scrollHeight;
+        } catch (err) {
+          console.error("Error:", err);
+          alert("An error occurred while generating the summary.\n" + err.message);
+        }
+      }
+
+      function copyTranscript() {
+        const textarea = document.getElementById("transcript");
+        textarea.select();
+        textarea.setSelectionRange(0, 99999);
+        document.execCommand("copy");
+      }
+
+      function copySummary() {
+        const textarea = document.getElementById("summary");
+        textarea.select();
+        textarea.setSelectionRange(0, 99999);
+        document.execCommand("copy");
+      }
+    </script>
+  </div>
 </body>
 </html>
