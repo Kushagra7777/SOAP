@@ -18,7 +18,7 @@
 # from peft import LoraConfig, get_peft_model, TaskType
 
 # # ✅ 1) Login
-# login(token="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")
+# login(token="hf....nN")
 
 # # ✅ 2) Paths
 # base_path = "E:/llm-fine-tuning"
@@ -155,7 +155,7 @@ from transformers import (
 from peft import LoraConfig, get_peft_model, TaskType
 
 # =============== 1) Login to HF Hub (optional but recommended)
-login(token="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")
+login(token="hf....nN")
 
 # =============== 2) Paths (adjust if needed)
 BASE_PATH = "E:/llm-fine-tuning"
